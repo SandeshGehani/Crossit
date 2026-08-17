@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #f7f9fb;
+    color: #191c1e;
+    overscroll-behavior-y: contain;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Safe area padding for iOS notch/home indicator */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+@layer components {
+  /* Hide scrollbar utility */
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-surface-container-lowest rounded-xl p-stack-md shadow-soft;
+  }
+
+  .card-elevated {
+    @apply bg-surface-container-lowest rounded-xl p-stack-md shadow-elevated;
+  }
+
+  /* Touch-friendly button base */
+  .btn {
+    @apply min-h-[48px] flex items-center justify-center rounded-lg font-geist font-semibold text-base transition-all duration-200 active:scale-[0.97];
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-on-primary px-6;
+  }
+
+  .btn-ghost {
+    @apply btn border border-primary text-primary bg-transparent px-6;
+  }
+
+  .btn-danger {
+    @apply btn bg-error-container text-on-error-container px-6;
+  }
+
+  /* Chip styles */
+  .chip {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-full text-label-caps font-geist font-semibold uppercase tracking-wider transition-all duration-200;
+  }
+
+  .chip-active {
+    @apply chip bg-primary text-on-primary;
+  }
+
+  .chip-inactive {
+    @apply chip bg-surface-container-high text-on-surface-variant;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full h-14 bg-surface-container-lowest rounded-lg px-4 text-body-lg font-inter text-on-surface border-2 border-transparent outline-none transition-all duration-200;
+  }
+
+  .input-field:focus {
+    @apply border-primary;
+  }
+
+  /* Status badges */
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-label-caps font-geist uppercase bg-secondary-container text-on-secondary-container;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-label-caps font-geist uppercase bg-error-container text-on-error-container;
+  }
+
+  .badge-neutral {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-label-caps font-geist uppercase bg-surface-container-high text-on-surface-variant;
+  }
+
+  /* Avatar with initials */
+  .avatar {
+    @apply w-12 h-12 rounded-full flex items-center justify-center font-geist font-bold text-base shrink-0;
+  }
+
+  /* Page transition */
+  .page-enter {
+    animation: pageSlideIn 0.3s ease-out;
+  }
+
+  @keyframes pageSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Slide up animation */
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Toast animation */
+  .toast-enter {
+    animation: toastIn 0.3s ease-out;
+  }
+
+  .toast-exit {
+    animation: toastOut 0.3s ease-in forwards;
+  }
+
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes toastOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-end justify-center;
+    animation: overlayFadeIn 0.2s ease-out;
+  }
+
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Bottom sheet */
+  .bottom-sheet {
+    @apply bg-surface-container-lowest rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto;
+    animation: sheetSlideUp 0.3s ease-out;
+  }
+
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+@layer utilities {
+  /* Number formatting - tabular for aligned numbers */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
