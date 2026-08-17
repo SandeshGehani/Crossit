@@ -1,5 +1,5 @@
 import { unparse } from 'papaparse';
-import * as store from '../store/localStore';
+import * as store from '../store/firestoreStore';
 import { formatCurrency } from './formatCurrency';
 
 /**

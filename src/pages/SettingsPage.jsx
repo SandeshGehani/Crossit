@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportToCSV, exportJSONBackup } from '../utils/exportUtils';
-import * as store from '../store/localStore';
+import * as store from '../store/firestoreStore';
 
 export default function SettingsPage() {
   const { lock } = useAuth();
