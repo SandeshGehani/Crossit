@@ -16,9 +16,14 @@ import AgingDebtsPage from './pages/AgingDebtsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 
+import { useRecurringEngine } from './hooks/useRecurringEngine';
+
 // Auth wrapper to switch between lock screen and app
 function AppContent() {
   const { isUnlocked } = useAuth();
+  
+  // Start the recurring engine when the app is unlocked
+  useRecurringEngine();
 
   if (!isUnlocked) {
     return <PinLockScreen />;

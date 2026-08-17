@@ -229,6 +229,39 @@ export function usePersonBalances() {
       isSettled: balance === 0 && personEntries.length > 0,
     };
   });
-
   return balances;
+}
+
+/**
+ * Hook for managing recurring rules
+ */
+export function useRecurringRules() {
+  const [rules, setRules] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = store.onSnapshot('recurringRules', (docs) => {
+      const active = docs.filter(d => !d.isDeleted);
+      setRules(active);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  const addRule = useCallback((rule) => {
+    return store.addDoc('recurringRules', {
+      ...rule,
+      isDeleted: false,
+    });
+  }, []);
+
+  const updateRule = useCallback((id, updates) => {
+    store.updateDoc('recurringRules', id, updates);
+  }, []);
+
+  const deleteRule = useCallback((id) => {
+    store.softDelete('recurringRules', id);
+  }, []);
+
+  return { rules, loading, addRule, updateRule, deleteRule };
 }

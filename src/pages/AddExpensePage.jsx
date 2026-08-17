@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useExpenses } from '../hooks/useData';
+import { useExpenses, useRecurringRules } from '../hooks/useData';
 import { toPaisa, CURRENCY_SYMBOL } from '../utils/formatCurrency';
 
 const CATEGORIES = [
@@ -20,6 +20,7 @@ const PAYMENT_METHODS = [
 export default function AddExpensePage() {
   const navigate = useNavigate();
   const { addExpense } = useExpenses();
+  const { addRule } = useRecurringRules();
 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0].id);
@@ -29,10 +30,22 @@ export default function AddExpensePage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState('monthly');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
 
-    // TODO: Create recurring rule if isRecurring is true once that service is built
+    let recurringRuleId = null;
+
+    if (isRecurring) {
+      recurringRuleId = await addRule({
+        amount: toPaisa(amount),
+        category,
+        paymentMethod,
+        note,
+        interval: recurringInterval,
+        startDate: new Date(date).toISOString(),
+        lastRunDate: new Date(date).toISOString(),
+      });
+    }
 
     addExpense({
       amount: toPaisa(amount),
@@ -40,10 +53,10 @@ export default function AddExpensePage() {
       paymentMethod,
       date: new Date(date).toISOString(),
       note,
-      recurringRuleId: null, // Placeholder for v2 or recurring feature
+      recurringRuleId,
     });
 
-    navigate(-1); // Go back
+    navigate(-1);
   };
 
   return (

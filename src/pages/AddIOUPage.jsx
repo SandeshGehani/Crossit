@@ -24,12 +24,13 @@ export default function AddIOUPage() {
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0].id);
   const [isGroupSplit, setIsGroupSplit] = useState(false);
   
-  // For group split (simplified for v1 - just divide evenly)
-  // Real implementation would allow individual share edits
-  const [groupParticipants, setGroupParticipants] = useState([]);
+  // Group Split State
+  const [selectedPersonIds, setSelectedPersonIds] = useState([]);
+  const [splitMode, setSplitMode] = useState('equal'); // 'equal' | 'custom'
+  const [customAmounts, setCustomAmounts] = useState({}); // { [personId]: stringAmount }
 
   const filteredPeople = useMemo(() => {
-    if (!search) return people.slice(0, 3); // Show top 3 recent if no search
+    if (!search) return people.slice(0, 3);
     return people.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
   }, [people, search]);
 
@@ -37,101 +38,165 @@ export default function AddIOUPage() {
     return people.find(p => p.id === selectedPersonId);
   }, [people, selectedPersonId]);
 
+  const handlePersonSelect = (id) => {
+    if (isGroupSplit) {
+      if (selectedPersonIds.includes(id)) {
+        setSelectedPersonIds(prev => prev.filter(pid => pid !== id));
+      } else {
+        setSelectedPersonIds(prev => [...prev, id]);
+      }
+    } else {
+      setSelectedPersonId(id);
+      setSearch('');
+    }
+  };
+
+  const handleCustomAmountChange = (id, val) => {
+    setCustomAmounts(prev => ({ ...prev, [id]: val }));
+  };
+
   const handleSave = () => {
     const val = parseFloat(amount);
     if (!val || val <= 0) return;
-    if (!isGroupSplit && !selectedPersonId) return;
 
-    if (isGroupSplit) {
-      // Group split logic (placeholder for v2 or if we add full splitService)
-      // For now, if we don't have the split service fully wired, we just fallback or show error.
-      // The spec says split events create individual ledger entries.
-      alert('Group split is a v2 feature (or requires splitService integration).');
-      return;
+    if (!isGroupSplit) {
+      if (!selectedPersonId) return;
+      // Single IOU
+      addEntry({
+        personId: selectedPersonId,
+        amount: toPaisa(amount),
+        direction,
+        note,
+        paymentMethod,
+      });
+    } else {
+      if (selectedPersonIds.length === 0) return;
+      
+      if (splitMode === 'equal') {
+        const splitAmount = (val / selectedPersonIds.length).toFixed(2);
+        selectedPersonIds.forEach(id => {
+          addEntry({
+            personId: id,
+            amount: toPaisa(splitAmount),
+            direction,
+            note: note ? `${note} (Split)` : 'Group Split',
+            paymentMethod,
+          });
+        });
+      } else if (splitMode === 'custom') {
+        // Validate custom sums
+        const totalCustom = selectedPersonIds.reduce((sum, id) => sum + (parseFloat(customAmounts[id]) || 0), 0);
+        if (Math.abs(totalCustom - val) > 0.01) {
+          alert(`Custom amounts must sum to ${val}. Current sum: ${totalCustom}`);
+          return;
+        }
+
+        selectedPersonIds.forEach(id => {
+          const personAmount = parseFloat(customAmounts[id]) || 0;
+          if (personAmount > 0) {
+            addEntry({
+              personId: id,
+              amount: toPaisa(personAmount.toString()),
+              direction,
+              note: note ? `${note} (Custom Split)` : 'Group Split',
+              paymentMethod,
+            });
+          }
+        });
+      }
     }
-
-    // Single IOU
-    addEntry({
-      personId: selectedPersonId,
-      amount: toPaisa(amount),
-      direction,
-      note,
-      paymentMethod,
-    });
 
     navigate(-1);
   };
 
   return (
     <div className="flex flex-col w-full h-full pb-32 page-enter bg-background">
-      {/* Header handled by Layout */}
-
       <section className="p-gutter flex flex-col gap-stack-lg bg-surface relative z-10">
+        
         {/* Person Picker */}
-        {!isGroupSplit && (
-          <div className="relative">
-            {!selectedPersonId ? (
-              <div className="relative">
-                <div className="flex items-center bg-surface-container rounded-full px-4 h-14 relative z-10 shadow-sm focus-within:ring-2 focus-within:ring-primary/20">
-                  <span className="material-symbols-outlined text-outline mr-3">search</span>
-                  <input
-                    type="text"
-                    placeholder="Who are you splitting with?"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="bg-transparent border-none outline-none flex-grow font-body-lg text-on-surface placeholder:text-outline"
-                  />
-                  {search && (
-                    <button onClick={() => setSearch('')} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-variant text-on-surface-variant ml-2">
-                      <span className="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                  )}
-                </div>
+        <div className="relative">
+          {(!selectedPersonId && !isGroupSplit) || isGroupSplit ? (
+            <div className="relative">
+              <div className="flex items-center bg-surface-container rounded-full px-4 h-14 relative z-10 shadow-sm focus-within:ring-2 focus-within:ring-primary/20">
+                <span className="material-symbols-outlined text-outline mr-3">search</span>
+                <input
+                  type="text"
+                  placeholder={isGroupSplit ? "Search people to split with..." : "Who are you splitting with?"}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="bg-transparent border-none outline-none flex-grow font-body-lg text-on-surface placeholder:text-outline"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-variant text-on-surface-variant ml-2">
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                )}
+              </div>
 
-                {/* Dropdown */}
-                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-highest rounded-xl p-2 shadow-lg z-20 max-h-48 overflow-y-auto slide-up">
-                  {filteredPeople.length > 0 ? (
-                    filteredPeople.map(p => (
+              {/* Dropdown */}
+              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-highest rounded-xl p-2 shadow-lg z-20 max-h-48 overflow-y-auto slide-up">
+                {filteredPeople.length > 0 ? (
+                  filteredPeople.map(p => {
+                    const isSelected = isGroupSplit && selectedPersonIds.includes(p.id);
+                    return (
                       <div
                         key={p.id}
-                        onClick={() => setSelectedPersonId(p.id)}
-                        className="flex items-center gap-3 p-3 rounded-lg active:bg-surface-variant transition-colors cursor-pointer"
+                        onClick={() => handlePersonSelect(p.id)}
+                        className={`flex items-center justify-between p-3 rounded-lg active:bg-surface-variant transition-colors cursor-pointer ${isSelected ? 'bg-primary/10' : ''}`}
                       >
-                        <div className="w-10 h-10 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-base uppercase shrink-0">
-                          {p.name.charAt(0)}
-                        </div>
-                        <div className="flex flex-col">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-base uppercase shrink-0">
+                            {p.name.charAt(0)}
+                          </div>
                           <span className="font-body-lg font-medium text-on-surface">{p.name}</span>
                         </div>
+                        {isSelected && <span className="material-symbols-outlined text-primary">check_circle</span>}
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-3 text-on-surface-variant text-body-sm text-center">
-                      No matching person found. <br />
-                      Go to People tab to add them first.
-                    </div>
-                  )}
+                    );
+                  })
+                ) : (
+                  <div className="p-3 text-on-surface-variant text-body-sm text-center">
+                    No matching person found. <br />
+                    Go to People tab to add them first.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-surface-container rounded-2xl p-4 shadow-sm fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-lg uppercase shrink-0">
+                  {selectedPerson?.name.charAt(0)}
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-headline-md text-on-surface">{selectedPerson?.name}</span>
+                  <span className="font-body-sm text-outline">Selected</span>
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center justify-between bg-surface-container rounded-2xl p-4 shadow-sm fade-in">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold text-lg uppercase shrink-0">
-                    {selectedPerson?.name.charAt(0)}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-headline-md text-on-surface">{selectedPerson?.name}</span>
-                    <span className="font-body-sm text-outline">Selected</span>
-                  </div>
+              <button
+                onClick={() => setSelectedPersonId(null)}
+                className="text-primary font-medium text-body-sm px-3 py-2 rounded-full bg-primary/10 active:bg-primary/20 transition-colors"
+              >
+                Change
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Selected People for Group Split */}
+        {isGroupSplit && selectedPersonIds.length > 0 && (
+          <div className="flex flex-wrap gap-2 slide-up">
+            {selectedPersonIds.map(id => {
+              const p = people.find(person => person.id === id);
+              return (
+                <div key={id} className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium">
+                  {p?.name}
+                  <button onClick={() => handlePersonSelect(id)} className="flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedPersonId(null)}
-                  className="text-primary font-medium text-body-sm px-3 py-2 rounded-full bg-primary/10 active:bg-primary/20 transition-colors"
-                >
-                  Change
-                </button>
-              </div>
-            )}
+              );
+            })}
           </div>
         )}
 
@@ -173,6 +238,7 @@ export default function AddIOUPage() {
       </section>
 
       <section className="p-gutter flex flex-col gap-stack-lg bg-surface-container-lowest flex-grow rounded-t-[32px] shadow-[0_-8px_24px_rgba(0,0,0,0.03)] -mt-6 relative z-0 pt-10">
+        
         {/* Note */}
         <div>
           <input
@@ -221,12 +287,55 @@ export default function AddIOUPage() {
           </div>
         </div>
 
-        {/* Group Split UI Placeholder */}
+        {/* Group Split UI */}
         {isGroupSplit && (
           <div className="flex flex-col gap-4 slide-up">
-            <div className="p-4 bg-surface-container-high rounded-xl text-center text-on-surface-variant font-body-sm">
-              Group split functionality requires multiple participants selection and will divide the amount evenly or by custom shares.
+            <div className="flex items-center justify-center gap-4 bg-surface-container-high p-1 rounded-lg">
+              <button 
+                onClick={() => setSplitMode('equal')}
+                className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${splitMode === 'equal' ? 'bg-surface shadow-sm text-on-surface' : 'text-on-surface-variant'}`}
+              >
+                Equal Split
+              </button>
+              <button 
+                onClick={() => setSplitMode('custom')}
+                className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${splitMode === 'custom' ? 'bg-surface shadow-sm text-on-surface' : 'text-on-surface-variant'}`}
+              >
+                Custom Amounts
+              </button>
             </div>
+
+            {selectedPersonIds.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {selectedPersonIds.map(id => {
+                  const p = people.find(person => person.id === id);
+                  const equalAmt = (parseFloat(amount || 0) / selectedPersonIds.length).toFixed(2);
+                  return (
+                    <div key={id} className="flex items-center justify-between p-3 bg-surface-container rounded-xl">
+                      <span className="font-body-md text-on-surface font-medium">{p?.name}</span>
+                      {splitMode === 'equal' ? (
+                        <span className="font-numeric text-on-surface-variant">{CURRENCY_SYMBOL}{equalAmt}</span>
+                      ) : (
+                        <div className="flex items-center bg-surface w-24 px-2 py-1 rounded-md border border-outline-variant/30">
+                          <span className="text-on-surface-variant mr-1">{CURRENCY_SYMBOL}</span>
+                          <input 
+                            type="number"
+                            value={customAmounts[id] || ''}
+                            onChange={(e) => handleCustomAmountChange(id, e.target.value)}
+                            className="w-full bg-transparent outline-none text-right font-numeric"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-on-surface-variant text-sm">
+                Select people from the search bar above to split the amount.
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -235,7 +344,7 @@ export default function AddIOUPage() {
       <div className="fixed bottom-0 left-0 right-0 p-gutter bg-gradient-to-t from-background via-background to-transparent pt-8 pb-[88px] z-50">
         <button
           onClick={handleSave}
-          disabled={!amount || parseFloat(amount) <= 0 || (!isGroupSplit && !selectedPersonId)}
+          disabled={!amount || parseFloat(amount) <= 0 || (!isGroupSplit && !selectedPersonId) || (isGroupSplit && selectedPersonIds.length === 0)}
           className="w-full h-14 bg-primary text-on-primary rounded-full font-headline-md shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <span>Create IOU</span>
