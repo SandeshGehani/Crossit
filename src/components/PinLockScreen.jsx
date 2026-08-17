@@ -2,84 +2,33 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function PinLockScreen() {
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
   const { unlock } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  const handleKeyPress = (num) => {
-    setError(false);
-    if (pin.length < 4) {
-      const newPin = pin + num;
-      setPin(newPin);
-      
-      if (newPin.length === 4) {
-        // Automatically try to unlock when 4 digits are entered
-        const success = unlock(newPin);
-        if (!success) {
-          setError(true);
-          setTimeout(() => setPin(''), 500); // Clear after delay to show the red error state briefly
-        }
-      }
-    }
-  };
-
-  const handleDelete = () => {
-    if (pin.length > 0) {
-      setPin(pin.slice(0, -1));
-      setError(false);
-    }
+  const handleLogin = async () => {
+    setLoading(true);
+    await unlock();
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm flex flex-col items-center">
-        {/* Logo/Icon */}
-        <div className="w-16 h-16 bg-primary text-on-primary rounded-2xl flex items-center justify-center mb-8 shadow-elevated">
-          <span className="material-symbols-outlined text-3xl">lock</span>
+    <div className="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center p-gutter">
+      <div className="w-full max-w-sm flex flex-col items-center slide-up">
+        {/* Logo / App Icon */}
+        <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 mb-8 text-on-primary font-headline-lg">
+          XL
         </div>
         
-        <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Welcome Back</h1>
-        <p className="font-body-sm text-body-sm text-on-surface-variant mb-12">Enter PIN to access Crossit</p>
+        <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Crossit</h1>
+        <p className="font-body-sm text-body-sm text-on-surface-variant mb-12">Sign in to sync your ledger</p>
 
-        {/* PIN Indicators */}
-        <div className={`flex gap-4 mb-16 ${error ? 'animate-bounce' : ''}`}>
-          {[0, 1, 2, 3].map((i) => (
-            <div 
-              key={i}
-              className={`w-4 h-4 rounded-full transition-all duration-300 ${
-                pin.length > i 
-                  ? error ? 'bg-error scale-110' : 'bg-primary scale-110' 
-                  : 'bg-surface-dim'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Keypad */}
-        <div className="grid grid-cols-3 gap-6 w-full max-w-[280px]">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-            <button
-              key={num}
-              onClick={() => handleKeyPress(num.toString())}
-              className="h-16 rounded-full bg-surface-container-lowest shadow-soft font-numeric-display text-2xl text-on-surface hover:bg-surface-container transition-colors active:scale-95"
-            >
-              {num}
-            </button>
-          ))}
-          <div /> {/* Empty cell for alignment */}
-          <button
-            onClick={() => handleKeyPress('0')}
-            className="h-16 rounded-full bg-surface-container-lowest shadow-soft font-numeric-display text-2xl text-on-surface hover:bg-surface-container transition-colors active:scale-95"
-          >
-            0
-          </button>
-          <button
-            onClick={handleDelete}
-            className="h-16 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-all"
-          >
-            <span className="material-symbols-outlined text-3xl">backspace</span>
-          </button>
-        </div>
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full h-14 bg-primary text-on-primary rounded-full font-headline-md shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {loading ? 'Signing in...' : 'Sign in with Google'}
+        </button>
       </div>
     </div>
   );

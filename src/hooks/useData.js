@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import * as store from '../store/localStore';
+import * as store from '../store/firestoreStore';
 
 /**
  * Hook for managing expenses
