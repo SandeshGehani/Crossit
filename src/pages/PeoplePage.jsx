@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePersonBalances } from '../hooks/useData';
+import { usePersonBalances, usePeople } from '../hooks/useData';
 import { formatCurrency } from '../utils/formatCurrency';
 
 export default function PeoplePage() {
   const navigate = useNavigate();
   const balances = usePersonBalances();
+  const { addPerson } = usePeople();
   
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All'); // 'All' | 'Owe Me' | 'I Owe' | 'Settled'
@@ -174,15 +175,12 @@ export default function PeoplePage() {
         )}
       </div>
 
-      {/* Floating Action Button - To add a new person, normally opens a simple prompt or modal */}
+      {/* Floating Action Button - To add a new person */}
       <button
         onClick={() => {
           const name = prompt("Enter person's name:");
           if (name && name.trim()) {
-            // we need the addPerson function from usePeople which we didn't destructure. 
-            // since this button is a simplified action, we could navigate to an "Add Person" page or just do it here.
-            // Let's rely on the FAB or Add IOU to implicitly create people if needed, or handle it via context.
-            // Actually, we should import addPerson here.
+            addPerson({ name: name.trim() });
           }
         }}
         className="fixed bottom-[88px] right-6 w-14 h-14 bg-tertiary text-on-tertiary rounded-full shadow-elevated flex items-center justify-center active:scale-90 transition-transform z-40"
