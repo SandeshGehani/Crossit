@@ -28,6 +28,7 @@ export default function AddIOUPage() {
   const [selectedPersonIds, setSelectedPersonIds] = useState([]);
   const [splitMode, setSplitMode] = useState('equal'); // 'equal' | 'custom'
   const [customAmounts, setCustomAmounts] = useState({}); // { [personId]: stringAmount }
+  const [includeSelf, setIncludeSelf] = useState(true); // Include yourself in the split
 
   const filteredPeople = useMemo(() => {
     if (!search) return people.slice(0, 3);
@@ -72,8 +73,12 @@ export default function AddIOUPage() {
     } else {
       if (selectedPersonIds.length === 0) return;
       
+      // Total heads = selected people + yourself (if included)
+      const totalHeads = selectedPersonIds.length + (includeSelf ? 1 : 0);
+
       if (splitMode === 'equal') {
-        const splitAmount = (val / selectedPersonIds.length).toFixed(2);
+        const splitAmount = (val / totalHeads).toFixed(2);
+        // Only create IOUs for the OTHER people, not yourself
         selectedPersonIds.forEach(id => {
           addEntry({
             personId: id,
@@ -84,13 +89,16 @@ export default function AddIOUPage() {
           });
         });
       } else if (splitMode === 'custom') {
-        // Validate custom sums
-        const totalCustom = selectedPersonIds.reduce((sum, id) => sum + (parseFloat(customAmounts[id]) || 0), 0);
+        // Validate: custom amounts for others + your share must equal the total
+        const othersTotal = selectedPersonIds.reduce((sum, id) => sum + (parseFloat(customAmounts[id]) || 0), 0);
+        const myShare = parseFloat(customAmounts['_self'] || 0);
+        const totalCustom = othersTotal + (includeSelf ? myShare : 0);
         if (Math.abs(totalCustom - val) > 0.01) {
-          alert(`Custom amounts must sum to ${val}. Current sum: ${totalCustom}`);
+          alert(`Custom amounts must sum to ${val}. Current sum: ${totalCustom.toFixed(2)}`);
           return;
         }
 
+        // Only create IOUs for other people
         selectedPersonIds.forEach(id => {
           const personAmount = parseFloat(customAmounts[id]) || 0;
           if (personAmount > 0) {
@@ -290,6 +298,19 @@ export default function AddIOUPage() {
         {/* Group Split UI */}
         {isGroupSplit && (
           <div className="flex flex-col gap-4 slide-up">
+            {/* Include Myself Toggle */}
+            <div className="flex items-center justify-between p-3 bg-surface-container rounded-xl" onClick={() => setIncludeSelf(!includeSelf)}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">person</span>
+                </div>
+                <span className="font-body-md text-on-surface font-medium">Include myself in split</span>
+              </div>
+              <div className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${includeSelf ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-300 ${includeSelf ? 'bg-on-primary translate-x-5' : 'bg-on-surface translate-x-0.5'}`} />
+              </div>
+            </div>
+
             <div className="flex items-center justify-center gap-4 bg-surface-container-high p-1 rounded-lg">
               <button 
                 onClick={() => setSplitMode('equal')}
@@ -307,9 +328,39 @@ export default function AddIOUPage() {
 
             {selectedPersonIds.length > 0 ? (
               <div className="flex flex-col gap-2">
+                {/* Your share (if included) */}
+                {includeSelf && (() => {
+                  const totalHeads = selectedPersonIds.length + 1;
+                  const equalAmt = (parseFloat(amount || 0) / totalHeads).toFixed(2);
+                  return (
+                    <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/20">
+                      <div className="flex items-center gap-2">
+                        <span className="font-body-md text-primary font-medium">You</span>
+                        <span className="text-xs text-primary/60 bg-primary/10 px-1.5 py-0.5 rounded">Your share</span>
+                      </div>
+                      {splitMode === 'equal' ? (
+                        <span className="font-numeric text-primary">{CURRENCY_SYMBOL}{equalAmt}</span>
+                      ) : (
+                        <div className="flex items-center bg-surface w-24 px-2 py-1 rounded-md border border-primary/30">
+                          <span className="text-primary mr-1">{CURRENCY_SYMBOL}</span>
+                          <input 
+                            type="number"
+                            value={customAmounts['_self'] || ''}
+                            onChange={(e) => handleCustomAmountChange('_self', e.target.value)}
+                            className="w-full bg-transparent outline-none text-right font-numeric text-primary"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Other people's shares */}
                 {selectedPersonIds.map(id => {
                   const p = people.find(person => person.id === id);
-                  const equalAmt = (parseFloat(amount || 0) / selectedPersonIds.length).toFixed(2);
+                  const totalHeads = selectedPersonIds.length + (includeSelf ? 1 : 0);
+                  const equalAmt = (parseFloat(amount || 0) / totalHeads).toFixed(2);
                   return (
                     <div key={id} className="flex items-center justify-between p-3 bg-surface-container rounded-xl">
                       <span className="font-body-md text-on-surface font-medium">{p?.name}</span>
