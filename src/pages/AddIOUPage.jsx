@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { usePeople, useLedgerEntries } from '../hooks/useData';
 import { toPaisa, CURRENCY_SYMBOL } from '../utils/formatCurrency';
 
@@ -12,8 +12,9 @@ const PAYMENT_METHODS = [
 
 export default function AddIOUPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { people } = usePeople();
-  const { addEntry } = useLedgerEntries();
+  const { entries, addEntry, updateEntry } = useLedgerEntries();
 
   const [search, setSearch] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState(null);
@@ -23,12 +24,27 @@ export default function AddIOUPage() {
   const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0].id);
   const [isGroupSplit, setIsGroupSplit] = useState(false);
-  
+  const [isEditMode, setIsEditMode] = useState(false);
+
   // Group Split State
   const [selectedPersonIds, setSelectedPersonIds] = useState([]);
   const [splitMode, setSplitMode] = useState('equal'); // 'equal' | 'custom'
   const [customAmounts, setCustomAmounts] = useState({}); // { [personId]: stringAmount }
   const [includeSelf, setIncludeSelf] = useState(true); // Include yourself in the split
+
+  useEffect(() => {
+    if (id && entries.length > 0) {
+      const existing = entries.find(e => e.id === id);
+      if (existing) {
+        setAmount((existing.amount / 100).toString());
+        setSelectedPersonId(existing.personId);
+        setDirection(existing.direction);
+        setNote(existing.note || '');
+        setPaymentMethod(existing.paymentMethod || PAYMENT_METHODS[0].id);
+        setIsEditMode(true);
+      }
+    }
+  }, [id, entries]);
 
   const filteredPeople = useMemo(() => {
     if (!search) return people.slice(0, 3);
@@ -59,6 +75,18 @@ export default function AddIOUPage() {
   const handleSave = () => {
     const val = parseFloat(amount);
     if (!val || val <= 0) return;
+
+    if (isEditMode) {
+      updateEntry(id, {
+        personId: selectedPersonId,
+        amount: toPaisa(amount),
+        direction,
+        note,
+        paymentMethod,
+      });
+      navigate(-1);
+      return;
+    }
 
     if (!isGroupSplit) {
       if (!selectedPersonId) return;
@@ -279,21 +307,23 @@ export default function AddIOUPage() {
           </div>
         </div>
 
-        {/* Group Split Toggle */}
-        <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl shadow-sm mt-2 cursor-pointer" onClick={() => setIsGroupSplit(!isGroupSplit)}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-              <span className="material-symbols-outlined">group</span>
+        {/* Group Split Toggle - hidden in edit mode */}
+        {!isEditMode && (
+          <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl shadow-sm mt-2 cursor-pointer" onClick={() => setIsGroupSplit(!isGroupSplit)}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                <span className="material-symbols-outlined">group</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-body-lg font-medium text-on-surface">Group Split</span>
+                <span className="font-body-sm text-outline">Divide among multiple people</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-body-lg font-medium text-on-surface">Group Split</span>
-              <span className="font-body-sm text-outline">Divide among multiple people</span>
+            <div className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${isGroupSplit ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${isGroupSplit ? 'bg-on-primary translate-x-7' : 'bg-on-surface translate-x-1'}`} />
             </div>
           </div>
-          <div className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${isGroupSplit ? 'bg-primary' : 'bg-outline-variant/30'}`}>
-            <div className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${isGroupSplit ? 'bg-on-primary translate-x-7' : 'bg-on-surface translate-x-1'}`} />
-          </div>
-        </div>
+        )}
 
         {/* Group Split UI */}
         {isGroupSplit && (
@@ -398,8 +428,8 @@ export default function AddIOUPage() {
           disabled={!amount || parseFloat(amount) <= 0 || (!isGroupSplit && !selectedPersonId) || (isGroupSplit && selectedPersonIds.length === 0)}
           className="w-full h-14 bg-primary text-on-primary rounded-full font-headline-md shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <span>Create IOU</span>
-          <span className="material-symbols-outlined">arrow_forward</span>
+          <span>{isEditMode ? 'Update IOU' : 'Create IOU'}</span>
+          <span className="material-symbols-outlined">{isEditMode ? 'check' : 'arrow_forward'}</span>
         </button>
       </div>
     </div>

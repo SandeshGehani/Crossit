@@ -35,7 +35,9 @@ function AppContent() {
         <Route element={<Layout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/add-expense" element={<AddExpensePage />} />
+          <Route path="/edit-expense/:id" element={<AddExpensePage />} />
           <Route path="/add-iou" element={<AddIOUPage />} />
+          <Route path="/edit-iou/:id" element={<AddIOUPage />} />
           <Route path="/people" element={<PeoplePage />} />
           <Route path="/person/:id" element={<PersonDetailPage />} />
           <Route path="/settle/:id" element={<SettleUpPage />} />

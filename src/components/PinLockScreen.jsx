@@ -15,9 +15,9 @@ export default function PinLockScreen() {
     <div className="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center p-gutter">
       <div className="w-full max-w-sm flex flex-col items-center slide-up">
         {/* Logo / App Icon */}
-        <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 mb-8 text-on-primary font-headline-lg">
-          XL
-        </div>
+          <div className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-elevated mb-stack-lg text-on-primary">
+            <span className="material-symbols-outlined text-[64px]">swap_horiz</span>
+          </div>
         
         <h1 className="font-headline-lg text-headline-lg text-on-surface mb-2">Crossit</h1>
         <p className="font-body-sm text-body-sm text-on-surface-variant mb-12">Sign in to sync your ledger</p>

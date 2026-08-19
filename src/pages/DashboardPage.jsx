@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExpenses, usePersonBalances, useLedgerEntries, useSettlements } from '../hooks/useData';
 import { formatCurrency, formatCompact } from '../utils/formatCurrency';
+import { ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -11,6 +12,43 @@ export default function DashboardPage() {
   const { settlements } = useSettlements();
 
   const [fabOpen, setFabOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
+  const { deleteExpense } = useExpenses();
+  const { deleteEntry } = useLedgerEntries();
+  const { deleteSettlement } = useSettlements();
+
+  const handleTransactionClick = (item) => {
+    setSelectedTransaction(item);
+    setIsActionSheetOpen(true);
+  };
+
+  const handleEdit = () => {
+    if (!selectedTransaction) return;
+    setIsActionSheetOpen(false);
+    if (selectedTransaction.type === 'expense') {
+      navigate(`/edit-expense/${selectedTransaction.id}`);
+    } else if (selectedTransaction.type === 'iou') {
+      navigate(`/edit-iou/${selectedTransaction.id}`);
+    }
+    // settlements usually aren't edited in v1, but we can add later
+  };
+
+  const handleDelete = () => {
+    if (!selectedTransaction) return;
+    if (window.confirm("Are you sure you want to delete this?")) {
+      if (selectedTransaction.type === 'expense') {
+        deleteExpense(selectedTransaction.id);
+      } else if (selectedTransaction.type === 'iou') {
+        deleteEntry(selectedTransaction.id);
+      } else if (selectedTransaction.type === 'settlement') {
+        deleteSettlement(selectedTransaction.id);
+      }
+      setIsActionSheetOpen(false);
+      setSelectedTransaction(null);
+    }
+  };
 
   // Calculate Totals
   const totals = useMemo(() => {
@@ -33,13 +71,24 @@ export default function DashboardPage() {
     const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
     let monthSpend = 0;
+    const dailySpend = {};
+
     expenses.forEach(exp => {
-      if (exp.date.startsWith(currentMonthStr)) {
+      if (exp.date.startsWith(currentMonthStr) && !exp.isDeleted) {
         monthSpend += exp.amount;
+        const day = parseInt(exp.date.substring(8, 10), 10);
+        dailySpend[day] = (dailySpend[day] || 0) + exp.amount;
       }
     });
 
-    return { owedToYou, youOwe, owedToYouCount, youOweCount, monthSpend };
+    const chartData = [];
+    let cumulative = 0;
+    for (let i = 1; i <= now.getDate(); i++) {
+      cumulative += (dailySpend[i] || 0);
+      chartData.push({ day: i, amount: cumulative / 100 });
+    }
+
+    return { owedToYou, youOwe, owedToYouCount, youOweCount, monthSpend, chartData };
   }, [balances, expenses]);
 
   // Combine and sort recent activity (Expenses + Ledger Entries + Settlements)
@@ -97,34 +146,32 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Spending Trend Chart - Simplified Placeholder matching the design */}
+      {/* Spending Trend Chart - Real Data */}
       <section className="bg-surface-container-lowest rounded-2xl shadow-soft p-stack-md">
         <div className="flex justify-between items-center mb-stack-md">
           <h2 className="font-headline-md text-headline-md text-on-surface">Spending Trend</h2>
           <select className="bg-surface-container text-on-surface-variant text-body-sm font-body-sm rounded-lg px-2 py-1 outline-none border-none">
             <option>This Month</option>
-            <option>Last Month</option>
           </select>
         </div>
-        <div className="w-full h-32 relative flex items-end justify-between px-2">
-          <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="chartGradient" x1="0%" x2="0%" y1="0%" y2="100%">
-                <stop offset="0%" stopColor="#142175" stopOpacity="0.2"></stop>
-                <stop offset="100%" stopColor="#142175" stopOpacity="0"></stop>
-              </linearGradient>
-            </defs>
-            <path d="M0,80 Q10,70 20,75 T40,60 T60,85 T80,40 T100,20 L100,100 L0,100 Z" fill="url(#chartGradient)"></path>
-            <path d="M0,80 Q10,70 20,75 T40,60 T60,85 T80,40 T100,20" fill="none" stroke="#142175" strokeWidth="2" vectorEffect="non-scaling-stroke"></path>
-          </svg>
-          <div className="flex w-full justify-between text-label-caps font-label-caps text-outline absolute -bottom-6 left-0">
-            <span>Week 1</span>
-            <span>Week 2</span>
-            <span>Week 3</span>
-            <span>Week 4</span>
-          </div>
+        <div className="w-full h-36">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={totals.chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#142175" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#142175" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <Tooltip 
+                formatter={(value) => [`${formatCurrency(value * 100)}`, 'Total Spent']}
+                labelFormatter={(label) => `Day ${label}`}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0px 4px 12px rgba(0,0,0,0.1)' }}
+              />
+              <Area type="monotone" dataKey="amount" stroke="#142175" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        <div className="h-6"></div>
       </section>
 
       {/* Recent Activity List */}
@@ -146,7 +193,7 @@ export default function DashboardPage() {
           recentActivity.map(item => {
             if (item.type === 'expense') {
               return (
-                <div key={item.id} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98]">
+                <div key={item.id} onClick={() => handleTransactionClick(item)} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98] cursor-pointer hover:bg-surface-container-lowest/80">
                   <div className="flex items-center gap-stack-md">
                     <div className="w-12 h-12 rounded-full bg-tertiary-fixed-dim text-on-tertiary-fixed-variant flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined">receipt</span>
@@ -166,7 +213,7 @@ export default function DashboardPage() {
               const isPositive = item.direction === 'they_owe_you';
               const person = balances.find(p => p.id === item.personId);
               return (
-                <div key={item.id} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98]">
+                <div key={item.id} onClick={() => handleTransactionClick(item)} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98] cursor-pointer hover:bg-surface-container-lowest/80">
                   <div className="flex items-center gap-stack-md">
                     <div className="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined">person</span>
@@ -186,7 +233,7 @@ export default function DashboardPage() {
               // settlement
               const person = balances.find(p => p.id === item.personId);
               return (
-                <div key={item.id} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98]">
+                <div key={item.id} onClick={() => handleTransactionClick(item)} className="bg-surface-container-lowest rounded-2xl p-stack-md shadow-soft flex items-center justify-between transition-transform active:scale-[0.98] cursor-pointer hover:bg-surface-container-lowest/80">
                   <div className="flex items-center gap-stack-md">
                     <div className="w-12 h-12 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined">check_circle</span>
@@ -239,6 +286,47 @@ export default function DashboardPage() {
           <span className="material-symbols-outlined text-3xl transition-transform duration-300" style={{ transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)' }}>add</span>
         </button>
       </div>
+
+      {/* Action Sheet Modal */}
+      {isActionSheetOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-end justify-center slide-up" onClick={() => setIsActionSheetOpen(false)}>
+          <div className="bg-surface-container-lowest rounded-t-3xl w-full max-w-lg p-6 shadow-elevated" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-1.5 bg-outline-variant/30 rounded-full mx-auto mb-6"></div>
+            
+            <div className="flex flex-col gap-4">
+              <h3 className="font-headline-md text-on-surface mb-2 text-center">
+                {selectedTransaction?.type === 'expense' ? 'Manage Expense' : 
+                 selectedTransaction?.type === 'iou' ? 'Manage IOU' : 'Manage Settlement'}
+              </h3>
+              
+              {selectedTransaction?.type !== 'settlement' && (
+                <button 
+                  onClick={handleEdit}
+                  className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-primary/10 text-primary font-headline-md active:bg-primary/20 transition-colors"
+                >
+                  <span className="material-symbols-outlined">edit</span>
+                  Edit Transaction
+                </button>
+              )}
+
+              <button 
+                onClick={handleDelete}
+                className="flex items-center justify-center gap-3 w-full py-4 rounded-xl bg-error/10 text-error font-headline-md active:bg-error/20 transition-colors"
+              >
+                <span className="material-symbols-outlined">delete</span>
+                Delete Transaction
+              </button>
+
+              <button 
+                onClick={() => setIsActionSheetOpen(false)}
+                className="flex items-center justify-center w-full py-4 mt-2 font-headline-md text-on-surface-variant active:bg-surface-variant rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

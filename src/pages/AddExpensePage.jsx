@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useExpenses, useRecurringRules } from '../hooks/useData';
 import { toPaisa, CURRENCY_SYMBOL } from '../utils/formatCurrency';
 
@@ -29,7 +29,8 @@ const PAYMENT_METHODS = [
 
 export default function AddExpensePage() {
   const navigate = useNavigate();
-  const { addExpense } = useExpenses();
+  const { id } = useParams();
+  const { expenses, addExpense, updateExpense } = useExpenses();
   const { addRule } = useRecurringRules();
 
   const [amount, setAmount] = useState('');
@@ -39,9 +40,36 @@ export default function AddExpensePage() {
   const [note, setNote] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState('monthly');
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  useEffect(() => {
+    if (id && expenses.length > 0) {
+      const existing = expenses.find(e => e.id === id);
+      if (existing) {
+        setAmount((existing.amount / 100).toString());
+        setCategory(existing.category);
+        setPaymentMethod(existing.paymentMethod);
+        setDate(existing.date.split('T')[0]);
+        setNote(existing.note || '');
+        setIsEditMode(true);
+      }
+    }
+  }, [id, expenses]);
 
   const handleSave = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
+
+    if (isEditMode) {
+      updateExpense(id, {
+        amount: toPaisa(amount),
+        category,
+        paymentMethod,
+        date: new Date(date).toISOString(),
+        note
+      });
+      navigate(-1);
+      return;
+    }
 
     let recurringRuleId = null;
 
@@ -181,12 +209,13 @@ export default function AddExpensePage() {
       </div>
 
       <div className="fixed bottom-[80px] left-0 w-full p-gutter bg-background/90 backdrop-blur-md pb-safe">
-        <button 
+        <button
           onClick={handleSave}
           disabled={!amount || parseFloat(amount) <= 0}
-          className="w-full h-touch-target-min bg-primary text-on-primary font-headline-md text-headline-md rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform disabled:opacity-50"
+          className="w-full h-14 bg-primary text-on-primary rounded-full font-headline-md shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          Save Expense
+          <span>{isEditMode ? 'Update Expense' : 'Create Expense'}</span>
+          <span className="material-symbols-outlined">{isEditMode ? 'check' : 'arrow_forward'}</span>
         </button>
       </div>
     </div>

@@ -205,3 +205,35 @@
     font-variant-numeric: tabular-nums;
   }
 }
+:root {
+  --color-surface: #f7f9fb;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container: #eceef0;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-highest: #e0e3e5;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #454651;
+  --color-outline: #767682;
+  --color-outline-variant: #c6c5d3;
+  --color-surface-variant: #e0e3e5;
+  --color-background: #f7f9fb;
+  --color-on-background: #191c1e;
+}
+
+.dark {
+  --color-background: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-container-lowest: #0B1121;
+  --color-surface-container-low: #0F172A;
+  --color-surface-container: #1E293B;
+  --color-surface-container-high: #334155;
+  --color-surface-container-highest: #475569;
+  --color-on-surface: #F8FAFC;
+  --color-on-surface-variant: #CBD5E1;
+  --color-outline: #94A3B8;
+  --color-outline-variant: #475569;
+  --color-surface-variant: #334155;
+  --color-on-background: #F8FAFC;
+}
+

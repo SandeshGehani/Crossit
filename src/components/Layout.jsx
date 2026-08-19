@@ -34,9 +34,9 @@ export default function Layout() {
         <div className="h-16 px-gutter flex items-center justify-between">
           <div className="flex items-center gap-2">
             {/* Minimal SVG Logo representation since we don't have the image file hosted */}
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary font-geist font-bold">
-              XL
-            </div>
+              <div className="w-10 h-10 rounded-[10px] bg-primary flex items-center justify-center text-on-primary shadow-soft">
+                <span className="material-symbols-outlined text-[24px]">swap_horiz</span>
+              </div>
             <span className="font-headline-md text-headline-md text-primary tracking-tight">
               {title}
             </span>

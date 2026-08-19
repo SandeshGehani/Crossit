@@ -21,11 +21,7 @@ export default function SettingsPage() {
   };
 
   const handleClearData = () => {
-    if (window.confirm("Are you sure you want to clear ALL data? This cannot be undone.")) {
-      store.clearAllData();
-      alert("All data cleared. The app will now reload.");
-      window.location.reload();
-    }
+    // Removed to prevent accidental deletion from Firestore
   };
 
   return (
@@ -34,8 +30,8 @@ export default function SettingsPage() {
         
         {/* Header / App Info */}
         <div className="flex flex-col items-center justify-center py-stack-lg mb-stack-md">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-soft mb-stack-sm text-on-primary font-headline-lg">
-            XL
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-soft mb-stack-sm text-on-primary">
+            <span className="material-symbols-outlined text-[36px]">swap_horiz</span>
           </div>
           <h2 className="font-headline-md text-headline-md text-on-surface mb-1">Crossit</h2>
           <p className="font-body-sm text-body-sm text-outline">Version 1.0.0 (Local Build)</p>
@@ -76,18 +72,7 @@ export default function SettingsPage() {
           </button>
           
           <div className="h-[1px] w-full bg-outline-variant/20 ml-16"></div>
-
-          <button onClick={handleClearData} className="flex items-center justify-between w-full p-4 bg-transparent hover:bg-error-container/50 transition-colors text-left group">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center text-error group-hover:bg-error group-hover:text-on-error transition-colors">
-                <span className="material-symbols-outlined">delete_forever</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-body-lg text-body-lg text-error font-medium">Clear All Data</span>
-                <span className="font-body-sm text-body-sm text-error/70">Wipe the local database entirely</span>
-              </div>
-            </div>
-          </button>
+          {/* Clear Data removed to protect cloud data */}
         </div>
 
         {/* Preferences & Info */}
@@ -137,7 +122,7 @@ export default function SettingsPage() {
             Lock App
           </button>
           <p className="text-center font-body-sm text-body-sm text-outline pb-4">
-            Secured by PIN (2709)
+            Secured by Google Authentication
           </p>
         </div>
       </div>
