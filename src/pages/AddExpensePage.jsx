@@ -5,9 +5,19 @@ import { toPaisa, CURRENCY_SYMBOL } from '../utils/formatCurrency';
 
 const CATEGORIES = [
   { id: 'food', icon: 'restaurant', label: 'Food', bg: 'bg-secondary-container', text: 'text-on-secondary-container' },
+  { id: 'groceries', icon: 'shopping_cart', label: 'Groceries', bg: 'bg-[#E6F4EA]', text: 'text-[#137333]' },
   { id: 'transport', icon: 'directions_car', label: 'Transport', bg: 'bg-[#E8F0FE]', text: 'text-[#1967D2]' },
+  { id: 'housing', icon: 'home', label: 'Housing', bg: 'bg-[#FCE8E6]', text: 'text-[#C5221F]' },
+  
+  { id: 'utilities', icon: 'bolt', label: 'Utilities', bg: 'bg-[#FEF7E0]', text: 'text-[#E37400]' },
+  { id: 'shopping', icon: 'shopping_bag', label: 'Shopping', bg: 'bg-[#F3E8FD]', text: 'text-[#8430CE]' },
   { id: 'subscriptions', icon: 'subscriptions', label: 'Subs', bg: 'bg-[#FCE8E6]', text: 'text-[#C5221F]' },
-  { id: 'shopping', icon: 'shopping_bag', label: 'Shopping', bg: 'bg-[#FEF7E0]', text: 'text-[#E37400]' },
+  { id: 'entertainment', icon: 'movie', label: 'Fun', bg: 'bg-[#E8F0FE]', text: 'text-[#1967D2]' },
+  
+  { id: 'health', icon: 'medical_services', label: 'Health', bg: 'bg-[#E6F4EA]', text: 'text-[#137333]' },
+  { id: 'education', icon: 'school', label: 'Education', bg: 'bg-[#FEF7E0]', text: 'text-[#E37400]' },
+  { id: 'travel', icon: 'flight', label: 'Travel', bg: 'bg-[#F3E8FD]', text: 'text-[#8430CE]' },
+  { id: 'other', icon: 'more_horiz', label: 'Other', bg: 'bg-surface-variant', text: 'text-on-surface-variant' },
 ];
 
 const PAYMENT_METHODS = [
