@@ -1,22 +1,33 @@
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { 
   collection, doc, addDoc as fsAddDoc, updateDoc as fsUpdateDoc, 
   deleteDoc as fsDeleteDoc, getDoc as fsGetDoc, getDocs as fsGetDocs, 
-  onSnapshot as fsOnSnapshot 
+  onSnapshot as fsOnSnapshot, query, where
 } from "firebase/firestore";
 
 export function onSnapshot(collectionName, callback) {
   const colRef = collection(db, collectionName);
-  return fsOnSnapshot(colRef, (snapshot) => {
+  
+  // If no user is logged in, don't attempt to fetch
+  if (!auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
+
+  const q = query(colRef, where("userId", "==", auth.currentUser.uid));
+  return fsOnSnapshot(q, (snapshot) => {
     const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(docs);
   });
 }
 
 export async function addDoc(collectionName, docData) {
+  if (!auth.currentUser) throw new Error("Must be logged in to add data");
+  
   const colRef = collection(db, collectionName);
   const data = {
     ...docData,
+    userId: auth.currentUser.uid,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -39,14 +50,20 @@ export async function getDoc(collectionName, id) {
 }
 
 export async function getDocs(collectionName) {
+  if (!auth.currentUser) return [];
+  
   const colRef = collection(db, collectionName);
-  const snap = await fsGetDocs(colRef);
+  const q = query(colRef, where("userId", "==", auth.currentUser.uid));
+  const snap = await fsGetDocs(q);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(d => !d.isDeleted);
 }
 
 export async function getAllDocs(collectionName) {
+  if (!auth.currentUser) return [];
+
   const colRef = collection(db, collectionName);
-  const snap = await fsGetDocs(colRef);
+  const q = query(colRef, where("userId", "==", auth.currentUser.uid));
+  const snap = await fsGetDocs(q);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 

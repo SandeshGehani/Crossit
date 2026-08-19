@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { exportToCSV, exportJSONBackup } from '../utils/exportUtils';
 import * as store from '../store/firestoreStore';
+import { auth, db } from '../firebase';
+import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 
 export default function SettingsPage() {
   const { lock } = useAuth();
@@ -22,6 +24,33 @@ export default function SettingsPage() {
 
   const handleClearData = () => {
     // Removed to prevent accidental deletion from Firestore
+  };
+
+  const handleMigrateData = async () => {
+    if (!auth.currentUser) {
+      alert("You must be logged in to migrate data.");
+      return;
+    }
+    const uid = auth.currentUser.uid;
+    const collectionsToMigrate = ['expenses', 'people', 'ledger_entries', 'settlements', 'recurring_rules'];
+    
+    let updatedCount = 0;
+    try {
+      for (const colName of collectionsToMigrate) {
+        const querySnapshot = await getDocs(collection(db, colName));
+        for (const document of querySnapshot.docs) {
+          const data = document.data();
+          if (!data.userId) {
+            await updateDoc(doc(db, colName, document.id), { userId: uid });
+            updatedCount++;
+          }
+        }
+      }
+      alert(`Migration complete! Updated ${updatedCount} records to belong to your account.`);
+    } catch (error) {
+      console.error("Migration error:", error);
+      alert("Error during migration: " + error.message);
+    }
   };
 
   return (
@@ -72,6 +101,20 @@ export default function SettingsPage() {
           </button>
           
           <div className="h-[1px] w-full bg-outline-variant/20 ml-16"></div>
+          
+          <button onClick={handleMigrateData} className="flex items-center justify-between w-full p-4 bg-transparent hover:bg-surface-container-highest transition-colors text-left group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                <span className="material-symbols-outlined">security_update_good</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-body-lg text-body-lg text-on-surface font-medium">Migrate Security Data</span>
+                <span className="font-body-sm text-body-sm text-outline">Lock your existing data to your account</span>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+          </button>
+          
           {/* Clear Data removed to protect cloud data */}
         </div>
 
