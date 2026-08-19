@@ -81,15 +81,28 @@ export default function DashboardPage() {
       }
     });
 
+    // Subtract settlements (money received back) from spending
+    settlements.forEach(s => {
+      const sDate = s.date || s.createdAt;
+      if (sDate && sDate.startsWith(currentMonthStr)) {
+        monthSpend -= s.amount;
+        const day = parseInt(sDate.substring(8, 10), 10);
+        dailySpend[day] = (dailySpend[day] || 0) - s.amount;
+      }
+    });
+
+    // Don't let net spend go below 0
+    if (monthSpend < 0) monthSpend = 0;
+
     const chartData = [];
     let cumulative = 0;
     for (let i = 1; i <= now.getDate(); i++) {
       cumulative += (dailySpend[i] || 0);
-      chartData.push({ day: i, amount: cumulative / 100 });
+      chartData.push({ day: i, amount: Math.max(0, cumulative) / 100 });
     }
 
     return { owedToYou, youOwe, owedToYouCount, youOweCount, monthSpend, chartData };
-  }, [balances, expenses]);
+  }, [balances, expenses, settlements]);
 
   // Combine and sort recent activity (Expenses + Ledger Entries + Settlements)
   const recentActivity = useMemo(() => {

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { usePeople, useLedgerEntries } from '../hooks/useData';
+import { usePeople, useLedgerEntries, useExpenses } from '../hooks/useData';
 import { toPaisa, CURRENCY_SYMBOL } from '../utils/formatCurrency';
 
 const PAYMENT_METHODS = [
@@ -25,6 +25,9 @@ export default function AddIOUPage() {
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0].id);
   const [isGroupSplit, setIsGroupSplit] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [alsoLogExpense, setAlsoLogExpense] = useState(true); // Log as expense when they owe you
+
+  const { addExpense } = useExpenses();
 
   // Group Split State
   const [selectedPersonIds, setSelectedPersonIds] = useState([]);
@@ -140,6 +143,17 @@ export default function AddIOUPage() {
           }
         });
       }
+    }
+
+    // If direction is 'they_owe_you' and user opted in, also log as an expense
+    if (direction === 'they_owe_you' && alsoLogExpense) {
+      addExpense({
+        amount: toPaisa(amount),
+        category: 'other',
+        paymentMethod,
+        date: new Date().toISOString(),
+        note: note ? `${note} (paid for others)` : 'Paid for others',
+      });
     }
 
     navigate(-1);
@@ -285,6 +299,24 @@ export default function AddIOUPage() {
             placeholder="What's this for? (e.g. Dinner, Rent)"
           />
         </div>
+
+        {/* Also log as expense toggle - only when they owe you */}
+        {direction === 'they_owe_you' && !isEditMode && (
+          <div className="flex items-center justify-between p-4 bg-surface-container rounded-2xl shadow-sm cursor-pointer" onClick={() => setAlsoLogExpense(!alsoLogExpense)}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center">
+                <span className="material-symbols-outlined">receipt_long</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-body-lg font-medium text-on-surface">Also log as expense</span>
+                <span className="font-body-sm text-outline">Track full amount in your spending</span>
+              </div>
+            </div>
+            <div className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${alsoLogExpense ? 'bg-primary' : 'bg-outline-variant/30'}`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${alsoLogExpense ? 'bg-on-primary translate-x-7' : 'bg-on-surface translate-x-1'}`} />
+            </div>
+          </div>
+        )}
 
         {/* Payment Methods */}
         <div className="flex flex-col gap-3">

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useExpenses, usePersonBalances } from '../hooks/useData';
+import { useExpenses, usePersonBalances, useSettlements } from '../hooks/useData';
 import { formatCurrency } from '../utils/formatCurrency';
 import { LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
@@ -14,6 +14,7 @@ const CATEGORY_COLORS = {
 export default function ReportsPage() {
   const { expenses } = useExpenses();
   const balances = usePersonBalances();
+  const { settlements } = useSettlements();
   
   const [timeframe, setTimeframe] = useState('MONTH'); // WEEK | MONTH | YEAR
 
@@ -41,12 +42,24 @@ export default function ReportsPage() {
       }
     });
 
+    // Subtract settlements (money received back) from spending
+    settlements.forEach(s => {
+      const sDate = s.date || s.createdAt;
+      if (sDate && sDate.startsWith(currentMonthStr)) {
+        totalSpent -= s.amount;
+        const day = parseInt(sDate.substring(8, 10), 10);
+        dailySpend[day] = (dailySpend[day] || 0) - s.amount;
+      }
+    });
+
+    if (totalSpent < 0) totalSpent = 0;
+
     // Format chart data
     const lineData = [];
     let cumulative = 0;
     for (let i = 1; i <= now.getDate(); i++) {
       cumulative += (dailySpend[i] || 0);
-      lineData.push({ day: i, amount: cumulative / 100 }); // value in rupees for charting
+      lineData.push({ day: i, amount: Math.max(0, cumulative) / 100 });
     }
 
     const pieData = Object.entries(categoryTotals)
@@ -81,7 +94,7 @@ export default function ReportsPage() {
       topDebtors,
       topCreditors
     };
-  }, [expenses, balances, timeframe]);
+  }, [expenses, balances, settlements, timeframe]);
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-background page-enter pb-32">
